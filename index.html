@@ -188,7 +188,7 @@
         opacity: 0.7;
       }
 
-      /* COVER - KEMBALI KE VERSI AWAL (GLASSMORPHISM CARD) */
+      /* COVER */
       #cover {
         position: fixed;
         inset: 0;
@@ -374,7 +374,7 @@
         opacity: 1;
       }
 
-      /* HERO - FOTO BACKGROUND HANYA DI SECTION INI */
+      /* HERO */
       #hero {
         position: relative;
         min-height: 100vh;
@@ -2772,7 +2772,7 @@
           music: "",
           hero: {
             bg: "https://file.garden/alY9SkoxwgtjCGxf/Matcha/6181256610047529598.jpg",
-            date: "Sabtu, 14 November 2026",
+            date: "14 . 11 . 2026",
           },
           couple: {
             groomName: "Angga Pratama Putra",
@@ -3086,7 +3086,11 @@
           $("coverBride").textContent = bNick;
           $("heroGroom").textContent = gFull;
           $("heroBride").textContent = bFull;
-          $("heroDate").textContent = (CONFIG.hero && CONFIG.hero.date) || "";
+
+          var heroDateVal =
+            getFooterDate() || (CONFIG.hero && CONFIG.hero.date) || "";
+          $("heroDate").textContent = heroDateVal;
+
           $("coverGuest").textContent = guestName || "Tamu Undangan";
           if (guestName) $("rsvpName").value = guestName;
 
