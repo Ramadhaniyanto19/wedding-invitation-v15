@@ -1,0 +1,7 @@
+RewriteEngine On
+
+# Arahkan /index.html ke / (root domain)
+RewriteRule ^index\.html$ / [R=301,L]
+
+# Sajikan dashboard.html ketika ada yang akses /dashboard
+RewriteRule ^dashboard$ dashboard.html [L]
