@@ -623,6 +623,15 @@
         background: var(--border2);
         color: var(--text);
       }
+      .btn-icon.red {
+        background: rgba(192, 57, 43, 0.08);
+        color: var(--red);
+        border: 1px solid rgba(192, 57, 43, 0.15);
+      }
+      .btn-icon.red:hover {
+        background: var(--red);
+        color: #fff;
+      }
       .wa-btn {
         background: #25d366;
         color: #fff;
@@ -1634,14 +1643,61 @@
         return cleaned;
       }
 
+      // FIX REQUEST 2: Robust copyText function using legacy fallback
       function copyText(text) {
-        navigator.clipboard
-          .writeText(text)
-          .then(() => toast("Berhasil disalin", "success"))
-          .catch(() => toast("Gagal menyalin", "error"));
+        var ta = null;
+        var copied = false;
+        try {
+          ta = document.createElement("textarea");
+          ta.value = text;
+          ta.setAttribute("readonly", "");
+          ta.style.position = "fixed";
+          ta.style.top = "0";
+          ta.style.left = "0";
+          ta.style.width = "1px";
+          ta.style.height = "1px";
+          ta.style.padding = "0";
+          ta.style.border = "none";
+          ta.style.outline = "none";
+          ta.style.boxShadow = "none";
+          ta.style.background = "transparent";
+          ta.style.opacity = "0";
+          document.body.appendChild(ta);
+          if (/ipad|iphone|ipod/i.test(navigator.userAgent)) {
+            ta.contentEditable = true;
+            ta.readOnly = false;
+            var range = document.createRange();
+            range.selectNodeContents(ta);
+            var sel = window.getSelection();
+            sel.removeAllRanges();
+            sel.addRange(range);
+            ta.setSelectionRange(0, text.length);
+          } else {
+            ta.focus();
+            ta.select();
+            ta.setSelectionRange(0, text.length);
+          }
+          copied = document.execCommand("copy");
+        } catch (e) {
+          copied = false;
+        } finally {
+          if (ta && ta.parentNode) ta.parentNode.removeChild(ta);
+        }
+
+        if (copied) {
+          toast("Berhasil disalin", "success");
+        } else {
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard
+              .writeText(text)
+              .then(() => toast("Berhasil disalin", "success"))
+              .catch(() => toast("Gagal menyalin", "error"));
+          } else {
+            toast("Gagal menyalin", "error");
+          }
+        }
       }
 
-      // PEMBARUAN: Otomatis mengambil URL root tanpa dashboard.html
       function getInviteBaseURL() {
         var path = window.location.pathname;
         if (path.endsWith("/")) path = path.slice(0, -1);
@@ -1816,7 +1872,6 @@
         initApp();
       };
 
-      // PEMBARUAN: Menggunakan URL bersih tanpa index.html
       window.previewInvitation = function (slugParam = null) {
         const slug = slugParam || currentSlug;
         const baseURL = getInviteBaseURL();
@@ -1863,8 +1918,13 @@
         const container = document.getElementById("dynamicPages");
         let html = "";
 
+        // FIX REQUEST 1: Added Nama Pengantin fields in Hero Section
         html += `<div class="page" id="page-hero"><div class="card"><div class="card-header"><h3><span class="iconify" data-icon="lucide:image"></span>Hero Section</h3></div><div class="card-body">
           ${uploadGuideHTML}
+          <div class="form-row">
+            <div class="form-group"><label>Nama Pria Lengkap</label><input type="text" data-node="couple" data-key="groomName" onchange="autoSaveField('couple','groomName',this.value)"></div>
+            <div class="form-group"><label>Nama Wanita Lengkap</label><input type="text" data-node="couple" data-key="brideName" onchange="autoSaveField('couple','brideName',this.value)"></div>
+          </div>
           <div class="form-group">
             <label>Tanggal Pernikahan (Teks)</label>
             <input type="text" data-node="hero" data-key="date" onchange="autoSaveField('hero','date',this.value)" placeholder="Sabtu, 14 November 2026" style="width: 100%; padding: 9px 13px; background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-sm); color: var(--text); font-family: var(--font); font-size: 0.83rem; outline: none;">
@@ -2156,6 +2216,7 @@ Wassalamualaikum Wr. Wb."></textarea>
           .join("");
       }
 
+      // FIX REQUEST 4: Added Delete Action button in Invite & WA Blast table
       function renderInvites() {
         const search = (
           document.getElementById("inviteSearch")?.value || ""
@@ -2180,8 +2241,13 @@ Wassalamualaikum Wr. Wb."></textarea>
             return `<tr>
             <td class="name-cell">${esc(d.name)}</td>
             <td>${esc(d.phone || "-")}</td>
-            <td><div style="display:flex;align-items:center;gap:4px"><span class="link-cell" title="${esc(link)}">${esc(link)}</span><button class="btn-icon" style="width:26px;height:26px" onclick="copyText('${link}')"><span class="iconify" data-icon="lucide:copy" style="font-size:.7rem"></span></button></div></td>
-            <td><a href="javascript:void(0)" class="wa-btn" onclick="shareWA('${k}')"><span class="iconify" data-icon="lucide:message-circle" style="font-size:.8rem"></span>Kirim</a></td>
+            <td><div style="display:flex;align-items:center;gap:4px"><span class="link-cell" title="${esc(link)}">${esc(link)}</span><button class="btn-icon" style="width:26px;height:26px" data-copy-link="${esc(link)}" onclick="copyText(this.dataset.copyLink)"><span class="iconify" data-icon="lucide:copy" style="font-size:.7rem"></span></button></div></td>
+            <td>
+              <div style="display:flex; gap:4px;">
+                <a href="javascript:void(0)" class="wa-btn" onclick="shareWA('${k}')"><span class="iconify" data-icon="lucide:message-circle" style="font-size:.8rem"></span>Kirim</a>
+                <button class="btn-icon red" onclick="deleteGuest('${k}')"><span class="iconify" data-icon="lucide:trash-2"></span></button>
+              </div>
+            </td>
           </tr>`;
           })
           .join("");

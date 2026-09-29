@@ -2835,9 +2835,7 @@
           ],
           gallery: [],
           gift: {
-            banks: [
-              { bank: "BCA", number: "1234567890", holder: "Neli Eriska" },
-            ],
+            banks: [],
             giftAddress: {
               address:
                 "Kp Jalan Cagak 004/001, Desa Tenjonagara, Kecamatan Cigalontang, Kabupaten Tasikmalaya",
@@ -3874,6 +3872,7 @@
               sel.addRange(range);
               ta.setSelectionRange(0, text.length);
             } else {
+              ta.focus();
               ta.select();
               ta.setSelectionRange(0, text.length);
             }
