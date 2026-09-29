@@ -2773,6 +2773,8 @@
           hero: {
             bg: "https://file.garden/alY9SkoxwgtjCGxf/Matcha/6181256610047529598.jpg",
             date: "14 . 11 . 2026",
+            groomName: "", // Disediakan terpisah
+            brideName: "", // Disediakan terpisah
           },
           couple: {
             groomName: "Angga Pratama Putra",
@@ -3074,10 +3076,14 @@
 
         function applyCoupleInfo() {
           var c = CONFIG.couple || {};
+          var h = CONFIG.hero || {};
+
           var gNick = c.groomNick || c.groomName || "Groom";
           var bNick = c.brideNick || c.brideName || "Bride";
-          var gFull = c.groomName || gNick;
-          var bFull = c.brideName || bNick;
+
+          // FIX: Mengambil data nama dari Hero, jika tidak ada fallback ke Couple
+          var gFull = h.groomName || c.groomName || gNick;
+          var bFull = h.brideName || c.brideName || bNick;
 
           document.title = "The Wedding of " + gNick + " & " + bNick;
           $("coverGroom").textContent = gNick;
