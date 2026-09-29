@@ -2773,8 +2773,8 @@
           hero: {
             bg: "https://file.garden/alY9SkoxwgtjCGxf/Matcha/6181256610047529598.jpg",
             date: "14 . 11 . 2026",
-            groomName: "", // Disediakan terpisah
-            brideName: "", // Disediakan terpisah
+            groomName: "",
+            brideName: "",
           },
           couple: {
             groomName: "Angga Pratama Putra",
@@ -3081,7 +3081,6 @@
           var gNick = c.groomNick || c.groomName || "Groom";
           var bNick = c.brideNick || c.brideName || "Bride";
 
-          // FIX: Mengambil data nama dari Hero, jika tidak ada fallback ke Couple
           var gFull = h.groomName || c.groomName || gNick;
           var bFull = h.brideName || c.brideName || bNick;
 
@@ -3850,63 +3849,6 @@
           }, 2600);
         }
 
-        function legacyCopy(text) {
-          var ta = null;
-          try {
-            ta = document.createElement("textarea");
-            ta.value = text;
-            ta.setAttribute("readonly", "");
-            ta.style.position = "fixed";
-            ta.style.top = "0";
-            ta.style.left = "0";
-            ta.style.width = "1px";
-            ta.style.height = "1px";
-            ta.style.padding = "0";
-            ta.style.border = "none";
-            ta.style.outline = "none";
-            ta.style.boxShadow = "none";
-            ta.style.background = "transparent";
-            ta.style.opacity = "0";
-            document.body.appendChild(ta);
-            if (/ipad|iphone|ipod/i.test(navigator.userAgent)) {
-              ta.contentEditable = true;
-              ta.readOnly = false;
-              var range = document.createRange();
-              range.selectNodeContents(ta);
-              var sel = window.getSelection();
-              sel.removeAllRanges();
-              sel.addRange(range);
-              ta.setSelectionRange(0, text.length);
-            } else {
-              ta.focus();
-              ta.select();
-              ta.setSelectionRange(0, text.length);
-            }
-            var ok = document.execCommand("copy");
-            return ok === true;
-          } catch (e) {
-            return false;
-          } finally {
-            if (ta && ta.parentNode) ta.parentNode.removeChild(ta);
-          }
-        }
-
-        function copyText(text) {
-          return new Promise(function (resolve, reject) {
-            if (legacyCopy(text)) {
-              resolve();
-              return;
-            }
-            if (navigator.clipboard && navigator.clipboard.writeText) {
-              navigator.clipboard.writeText(text).then(resolve, function () {
-                reject(new Error("Clipboard tidak tersedia"));
-              });
-              return;
-            }
-            reject(new Error("Clipboard tidak tersedia"));
-          });
-        }
-
         function initGiftModal() {
           $("btnGift").addEventListener("click", function () {
             $("giftModal").classList.add("active");
@@ -3928,13 +3870,62 @@
             var value = btn.getAttribute("data-copy") || "";
             if (!value) return;
             var msg = btn.getAttribute("data-msg") || "Berhasil disalin";
-            copyText(value)
-              .then(function () {
-                showToast(msg);
-              })
-              .catch(function () {
+
+            var ta = null;
+            var copied = false;
+            try {
+              ta = document.createElement("textarea");
+              ta.value = value;
+              ta.setAttribute("readonly", "");
+              ta.style.position = "fixed";
+              ta.style.top = "0";
+              ta.style.left = "0";
+              ta.style.width = "1px";
+              ta.style.height = "1px";
+              ta.style.padding = "0";
+              ta.style.border = "none";
+              ta.style.outline = "none";
+              ta.style.boxShadow = "none";
+              ta.style.background = "transparent";
+              ta.style.opacity = "0";
+              document.body.appendChild(ta);
+              if (/ipad|iphone|ipod/i.test(navigator.userAgent)) {
+                ta.contentEditable = true;
+                ta.readOnly = false;
+                var range = document.createRange();
+                range.selectNodeContents(ta);
+                var sel = window.getSelection();
+                sel.removeAllRanges();
+                sel.addRange(range);
+                ta.setSelectionRange(0, value.length);
+              } else {
+                ta.focus();
+                ta.select();
+                ta.setSelectionRange(0, value.length);
+              }
+              copied = document.execCommand("copy");
+            } catch (err) {
+              copied = false;
+            } finally {
+              if (ta && ta.parentNode) ta.parentNode.removeChild(ta);
+            }
+
+            if (copied) {
+              showToast(msg);
+            } else {
+              if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard
+                  .writeText(value)
+                  .then(function () {
+                    showToast(msg);
+                  })
+                  .catch(function () {
+                    showToast("Gagal menyalin, silakan salin manual");
+                  });
+              } else {
                 showToast("Gagal menyalin, silakan salin manual");
-              });
+              }
+            }
           });
         }
 
