@@ -1917,7 +1917,6 @@
         const container = document.getElementById("dynamicPages");
         let html = "";
 
-        // FIX: Mengubah node data dari 'couple' menjadi 'hero' agar custom terpisah
         html += `<div class="page" id="page-hero"><div class="card"><div class="card-header"><h3><span class="iconify" data-icon="lucide:image"></span>Hero Section</h3></div><div class="card-body">
           ${uploadGuideHTML}
           <div class="form-row">
@@ -1997,6 +1996,7 @@
           <div class="form-group"><label>Pesan Penutup</label><textarea data-node="closing" data-key="message" onchange="autoSaveField('closing','message',this.value)" style="min-height: 100px;"></textarea></div>
         </div></div></div>`;
 
+        // UPDATE: Added "Reset Status" button
         html += `<div class="page" id="page-invite">
           <div class="card">
             <div class="card-header"><h3><span class="iconify" data-icon="lucide:message-square"></span>Template Pesan WhatsApp</h3></div>
@@ -2029,11 +2029,13 @@ Wassalamualaikum Wr. Wb."></textarea>
               <div style="display:flex; gap:8px; flex-wrap: wrap;">
                 <button class="btn btn-secondary btn-sm" onclick="openImportModal()"><span class="iconify" data-icon="lucide:upload" style="font-size: 0.75rem"></span>Import Banyak</button>
                 <button class="btn btn-primary btn-sm" onclick="openModal('guestModal')">Tambah Teman</button>
-                <button class="btn btn-accent btn-sm" id="blastAllBtn" onclick="blastAllWA()"><span class="iconify" data-icon="lucide:send"></span> Blast Semua (2s)</button>
+                <button class="btn btn-accent btn-sm" id="blast10Btn" onclick="blastNext10()"><span class="iconify" data-icon="lucide:send"></span> Blast 10 Otomatis</button>
+                <button class="btn btn-primary btn-sm" id="blastSelectedBtn" onclick="blastSelected()"><span class="iconify" data-icon="lucide:check-check"></span> Blast Terpilih</button>
+                <button class="btn btn-secondary btn-sm" id="resetBlastBtn" onclick="resetBlastStatus()"><span class="iconify" data-icon="lucide:rotate-ccw"></span> Reset Status</button>
               </div>
             </div>
             <div class="card-body" style="padding:14px 18px"><div class="toolbar"><div class="search-box"><span class="iconify" data-icon="lucide:search"></span><input id="inviteSearch" placeholder="Cari nama teman..." oninput="renderInvites()"></div></div></div>
-            <div class="table-wrap"><table><thead><tr><th>Nama</th><th>No. WA</th><th>Link Undangan</th><th>Aksi</th></tr></thead><tbody id="inviteTableBody"></tbody></table></div>
+            <div class="table-wrap"><table><thead><tr><th style="width:30px;"><input type="checkbox" id="selectAllInvites" onclick="toggleSelectAllInvites(this)"></th><th>Nama</th><th>No. WA</th><th>Status Blast</th><th>Aksi</th></tr></thead><tbody id="inviteTableBody"></tbody></table></div>
           </div>
         </div>`;
 
@@ -2227,7 +2229,7 @@ Wassalamualaikum Wr. Wb."></textarea>
             (g[1].name || "").toLowerCase().includes(search),
           );
         if (!arr.length) {
-          tbody.innerHTML = `<tr><td colspan="4"><div class="empty"><p>Belum ada teman. Klik "Tambah Teman" atau "Import Banyak".</p></div></td></tr>`;
+          tbody.innerHTML = `<tr><td colspan="5"><div class="empty"><p>Belum ada teman. Klik "Tambah Teman" atau "Import Banyak".</p></div></td></tr>`;
           return;
         }
         tbody.innerHTML = arr
@@ -2236,13 +2238,18 @@ Wassalamualaikum Wr. Wb."></textarea>
               d = g[1];
             const slug = d.slug || makeSlug(d.name);
             const link = `${getInviteBaseURL()}?couple=${currentSlug}&to=${slug}`;
+            const blastedBadge = d.blasted
+              ? '<span class="badge hadir">Sudah Diblast</span>'
+              : '<span class="badge belum">Belum Diblast</span>';
             return `<tr>
+            <td><input type="checkbox" class="invite-checkbox" data-key="${k}"></td>
             <td class="name-cell">${esc(d.name)}</td>
             <td>${esc(d.phone || "-")}</td>
-            <td><div style="display:flex;align-items:center;gap:4px"><span class="link-cell" title="${esc(link)}">${esc(link)}</span><button class="btn-icon" style="width:26px;height:26px" data-copy-link="${esc(link)}" onclick="copyText(this.dataset.copyLink)"><span class="iconify" data-icon="lucide:copy" style="font-size:.7rem"></span></button></div></td>
+            <td>${blastedBadge}</td>
             <td>
               <div style="display:flex; gap:4px;">
                 <a href="javascript:void(0)" class="wa-btn" onclick="shareWA('${k}')"><span class="iconify" data-icon="lucide:message-circle" style="font-size:.8rem"></span>Kirim</a>
+                <button class="btn-icon" style="width:26px;height:26px" data-copy-link="${esc(link)}" onclick="copyText(this.dataset.copyLink)"><span class="iconify" data-icon="lucide:copy" style="font-size:.7rem"></span></button>
                 <button class="btn-icon red" onclick="deleteGuest('${k}')"><span class="iconify" data-icon="lucide:trash-2"></span></button>
               </div>
             </td>
@@ -2250,6 +2257,23 @@ Wassalamualaikum Wr. Wb."></textarea>
           })
           .join("");
       }
+
+      window.toggleSelectAllInvites = function (selectAllCb) {
+        document.querySelectorAll(".invite-checkbox").forEach((cb) => {
+          cb.checked = selectAllCb.checked;
+        });
+      };
+
+      // UPDATE: Function to reset blast status
+      window.resetBlastStatus = function () {
+        Object.keys(state.guest).forEach((key) => {
+          if (state.guest[key]) {
+            state.guest[key].blasted = false;
+          }
+        });
+        renderInvites();
+        toast("Status blast berhasil direset", "success");
+      };
 
       function renderRsvp() {
         const tbody = document.getElementById("rsvpTableBody");
@@ -2513,16 +2537,97 @@ Wassalamualaikum Wr. Wb."></textarea>
         window.open(url, "_blank");
       };
 
-      window.blastAllWA = async function () {
+      window.blastNext10 = async function () {
         if (isBlasting) return;
-        const guests = Object.entries(state.guest);
-        if (guests.length === 0)
-          return toast("Tidak ada tamu untuk di-blast", "error");
+        const guestsArr = Object.entries(state.guest).filter(
+          ([k, d]) => !d.blasted,
+        );
+        if (guestsArr.length === 0) {
+          return toast("Semua tamu sudah diblast!", "info");
+        }
 
-        isBlasting = true;
-        const btn = document.getElementById("blastAllBtn");
+        const btn = document.getElementById("blast10Btn");
         const originalText = btn.innerHTML;
         btn.disabled = true;
+        isBlasting = true;
+
+        toast("Mohon izinkan pop-up untuk situs ini di browser Anda.", "info");
+
+        const groomName =
+          state.settings.groomName || state.couple.groomName || "Mempelai Pria";
+        const brideName =
+          state.settings.brideName ||
+          state.couple.brideName ||
+          "Mempelai Wanita";
+        let weddingDate = state.settings.date || state.hero.date || "";
+        if (weddingDate) {
+          try {
+            const dObj = new Date(weddingDate);
+            weddingDate = dObj.toLocaleDateString("id-ID", {
+              weekday: "long",
+              year: "numeric",
+              month: "long",
+              day: "numeric",
+            });
+          } catch (e) {}
+        }
+
+        const defaultMsg = `Assalamualaikum Wr. Wb.\n\nKepada Yth. Bapak/Ibu/Saudara/i *[Nama]*\n\nDengan memohon rahmat dan ridho Allah SWT, kami bermaksud menyelenggarakan acara pernikahan:\n\n❤️ *[Pria]* & *[Wanita]* ❤️\nTanggal: *[Tanggal]*\n\nKami mengundang Anda untuk hadir dan memberikan doa restu.\n\n🔗 *[Link]*\n\nMerupakan suatu kehormatan bagi kami atas kehadirannya.\n\nWassalamualaikum Wr. Wb.`;
+
+        const batch = guestsArr.slice(0, 10);
+        let count = 0;
+
+        for (const [key, d] of batch) {
+          btn.innerHTML = `<span class="iconify" data-icon="lucide:loader"></span> Mengirim (${count + 1}/${batch.length})...`;
+
+          const slug = d.slug || makeSlug(d.name);
+          const link = `${getInviteBaseURL()}?couple=${currentSlug}&to=${slug}`;
+          let msg = state.settings.waTemplate || defaultMsg;
+          msg = msg
+            .replace(/\[Nama\]/g, d.name || "Tamu Undangan")
+            .replace(/\[Link\]/g, link)
+            .replace(/\[Pria\]/g, groomName)
+            .replace(/\[Wanita\]/g, brideName)
+            .replace(/\[Tanggal\]/g, weddingDate || "-");
+
+          const phone = formatPhone(d.phone || "");
+          let url = phone
+            ? `https://api.whatsapp.com/send?phone=${phone}&text=${encodeURIComponent(msg)}`
+            : `https://api.whatsapp.com/send?text=${encodeURIComponent(msg)}`;
+
+          window.open(url, "_blank");
+
+          state.guest[key].blasted = true;
+          count++;
+
+          if (count < batch.length) {
+            await new Promise((resolve) => setTimeout(resolve, 500));
+          }
+        }
+
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+        isBlasting = false;
+        renderInvites();
+        toast(
+          `${count} undangan berhasil dibuka. Cek tab browser Anda.`,
+          "success",
+        );
+      };
+
+      window.blastSelected = async function () {
+        if (isBlasting) return;
+        const selectedCheckboxes = document.querySelectorAll(
+          ".invite-checkbox:checked",
+        );
+        if (selectedCheckboxes.length === 0) {
+          return toast("Pilih minimal 1 tamu untuk diblast", "error");
+        }
+
+        const btn = document.getElementById("blastSelectedBtn");
+        const originalText = btn.innerHTML;
+        btn.disabled = true;
+        isBlasting = true;
 
         toast("Mohon izinkan pop-up untuk situs ini di browser Anda.", "info");
 
@@ -2548,8 +2653,13 @@ Wassalamualaikum Wr. Wb."></textarea>
         const defaultMsg = `Assalamualaikum Wr. Wb.\n\nKepada Yth. Bapak/Ibu/Saudara/i *[Nama]*\n\nDengan memohon rahmat dan ridho Allah SWT, kami bermaksud menyelenggarakan acara pernikahan:\n\n❤️ *[Pria]* & *[Wanita]* ❤️\nTanggal: *[Tanggal]*\n\nKami mengundang Anda untuk hadir dan memberikan doa restu.\n\n🔗 *[Link]*\n\nMerupakan suatu kehormatan bagi kami atas kehadirannya.\n\nWassalamualaikum Wr. Wb.`;
 
         let count = 0;
-        for (const [key, d] of guests) {
-          btn.innerHTML = `<span class="iconify" data-icon="lucide:loader"></span> Mengirim (${count + 1}/${guests.length})...`;
+
+        for (const cb of selectedCheckboxes) {
+          const key = cb.dataset.key;
+          const d = state.guest[key];
+          if (!d) continue;
+
+          btn.innerHTML = `<span class="iconify" data-icon="lucide:loader"></span> Mengirim (${count + 1}/${selectedCheckboxes.length})...`;
 
           const slug = d.slug || makeSlug(d.name);
           const link = `${getInviteBaseURL()}?couple=${currentSlug}&to=${slug}`;
@@ -2567,18 +2677,21 @@ Wassalamualaikum Wr. Wb."></textarea>
             : `https://api.whatsapp.com/send?text=${encodeURIComponent(msg)}`;
 
           window.open(url, "_blank");
+
+          state.guest[key].blasted = true;
           count++;
 
-          if (count < guests.length) {
-            await new Promise((resolve) => setTimeout(resolve, 2000));
+          if (count < selectedCheckboxes.length) {
+            await new Promise((resolve) => setTimeout(resolve, 500));
           }
         }
 
         btn.disabled = false;
         btn.innerHTML = originalText;
         isBlasting = false;
+        renderInvites();
         toast(
-          `${count} undangan berhasil dikirim (cek tab browser Anda).`,
+          `${count} undangan berhasil dibuka. Cek tab browser Anda.`,
           "success",
         );
       };
