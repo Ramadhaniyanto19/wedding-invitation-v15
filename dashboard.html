@@ -1735,7 +1735,8 @@
         return `${makeSlug(groom)}-${makeSlug(bride)}-${datePart}`;
       }
 
-      function toast(msg, type = "success") {
+      // UPDATE: Added duration parameter for toast
+      function toast(msg, type = "success", duration = 2500) {
         var c = document.getElementById("toastContainer");
         var t = document.createElement("div");
         t.className = "toast " + type;
@@ -1745,7 +1746,7 @@
           t.style.opacity = "0";
           t.style.transform = "translateX(40px)";
           setTimeout(() => t.remove(), 300);
-        }, 2500);
+        }, duration);
       }
       function openModal(id) {
         document.getElementById(id).classList.add("open");
@@ -1996,7 +1997,6 @@
           <div class="form-group"><label>Pesan Penutup</label><textarea data-node="closing" data-key="message" onchange="autoSaveField('closing','message',this.value)" style="min-height: 100px;"></textarea></div>
         </div></div></div>`;
 
-        // UPDATE: Added "Reset Status" button
         html += `<div class="page" id="page-invite">
           <div class="card">
             <div class="card-header"><h3><span class="iconify" data-icon="lucide:message-square"></span>Template Pesan WhatsApp</h3></div>
@@ -2264,7 +2264,6 @@ Wassalamualaikum Wr. Wb."></textarea>
         });
       };
 
-      // UPDATE: Function to reset blast status
       window.resetBlastStatus = function () {
         Object.keys(state.guest).forEach((key) => {
           if (state.guest[key]) {
@@ -2537,6 +2536,7 @@ Wassalamualaikum Wr. Wb."></textarea>
         window.open(url, "_blank");
       };
 
+      // UPDATE: Synchronous loop to bypass popup blocker as much as possible
       window.blastNext10 = async function () {
         if (isBlasting) return;
         const guestsArr = Object.entries(state.guest).filter(
@@ -2550,8 +2550,6 @@ Wassalamualaikum Wr. Wb."></textarea>
         const originalText = btn.innerHTML;
         btn.disabled = true;
         isBlasting = true;
-
-        toast("Mohon izinkan pop-up untuk situs ini di browser Anda.", "info");
 
         const groomName =
           state.settings.groomName || state.couple.groomName || "Mempelai Pria";
@@ -2576,10 +2574,9 @@ Wassalamualaikum Wr. Wb."></textarea>
 
         const batch = guestsArr.slice(0, 10);
         let count = 0;
+        let blocked = 0;
 
         for (const [key, d] of batch) {
-          btn.innerHTML = `<span class="iconify" data-icon="lucide:loader"></span> Mengirim (${count + 1}/${batch.length})...`;
-
           const slug = d.slug || makeSlug(d.name);
           const link = `${getInviteBaseURL()}?couple=${currentSlug}&to=${slug}`;
           let msg = state.settings.waTemplate || defaultMsg;
@@ -2595,13 +2592,12 @@ Wassalamualaikum Wr. Wb."></textarea>
             ? `https://api.whatsapp.com/send?phone=${phone}&text=${encodeURIComponent(msg)}`
             : `https://api.whatsapp.com/send?text=${encodeURIComponent(msg)}`;
 
-          window.open(url, "_blank");
-
-          state.guest[key].blasted = true;
-          count++;
-
-          if (count < batch.length) {
-            await new Promise((resolve) => setTimeout(resolve, 500));
+          const win = window.open(url, "_blank");
+          if (!win) {
+            blocked++;
+          } else {
+            state.guest[key].blasted = true;
+            count++;
           }
         }
 
@@ -2609,10 +2605,20 @@ Wassalamualaikum Wr. Wb."></textarea>
         btn.innerHTML = originalText;
         isBlasting = false;
         renderInvites();
-        toast(
-          `${count} undangan berhasil dibuka. Cek tab browser Anda.`,
-          "success",
-        );
+
+        if (blocked > 0) {
+          toast(
+            `Hanya ${count} link yang terbuka. Browser memblokir ${blocked} pop-up. Mohon izinkan pop-up untuk situs ini (klik ikon blokir di address bar).`,
+            "error",
+            5000,
+          );
+        } else {
+          toast(
+            `${count} undangan berhasil dibuka. Cek tab browser Anda.`,
+            "success",
+            3000,
+          );
+        }
       };
 
       window.blastSelected = async function () {
@@ -2628,8 +2634,6 @@ Wassalamualaikum Wr. Wb."></textarea>
         const originalText = btn.innerHTML;
         btn.disabled = true;
         isBlasting = true;
-
-        toast("Mohon izinkan pop-up untuk situs ini di browser Anda.", "info");
 
         const groomName =
           state.settings.groomName || state.couple.groomName || "Mempelai Pria";
@@ -2653,13 +2657,12 @@ Wassalamualaikum Wr. Wb."></textarea>
         const defaultMsg = `Assalamualaikum Wr. Wb.\n\nKepada Yth. Bapak/Ibu/Saudara/i *[Nama]*\n\nDengan memohon rahmat dan ridho Allah SWT, kami bermaksud menyelenggarakan acara pernikahan:\n\n❤️ *[Pria]* & *[Wanita]* ❤️\nTanggal: *[Tanggal]*\n\nKami mengundang Anda untuk hadir dan memberikan doa restu.\n\n🔗 *[Link]*\n\nMerupakan suatu kehormatan bagi kami atas kehadirannya.\n\nWassalamualaikum Wr. Wb.`;
 
         let count = 0;
+        let blocked = 0;
 
         for (const cb of selectedCheckboxes) {
           const key = cb.dataset.key;
           const d = state.guest[key];
           if (!d) continue;
-
-          btn.innerHTML = `<span class="iconify" data-icon="lucide:loader"></span> Mengirim (${count + 1}/${selectedCheckboxes.length})...`;
 
           const slug = d.slug || makeSlug(d.name);
           const link = `${getInviteBaseURL()}?couple=${currentSlug}&to=${slug}`;
@@ -2676,13 +2679,12 @@ Wassalamualaikum Wr. Wb."></textarea>
             ? `https://api.whatsapp.com/send?phone=${phone}&text=${encodeURIComponent(msg)}`
             : `https://api.whatsapp.com/send?text=${encodeURIComponent(msg)}`;
 
-          window.open(url, "_blank");
-
-          state.guest[key].blasted = true;
-          count++;
-
-          if (count < selectedCheckboxes.length) {
-            await new Promise((resolve) => setTimeout(resolve, 500));
+          const win = window.open(url, "_blank");
+          if (!win) {
+            blocked++;
+          } else {
+            state.guest[key].blasted = true;
+            count++;
           }
         }
 
@@ -2690,10 +2692,20 @@ Wassalamualaikum Wr. Wb."></textarea>
         btn.innerHTML = originalText;
         isBlasting = false;
         renderInvites();
-        toast(
-          `${count} undangan berhasil dibuka. Cek tab browser Anda.`,
-          "success",
-        );
+
+        if (blocked > 0) {
+          toast(
+            `Hanya ${count} link yang terbuka. Browser memblokir ${blocked} pop-up. Mohon izinkan pop-up untuk situs ini (klik ikon blokir di address bar).`,
+            "error",
+            5000,
+          );
+        } else {
+          toast(
+            `${count} undangan berhasil dibuka. Cek tab browser Anda.`,
+            "success",
+            3000,
+          );
+        }
       };
 
       window.openImportModal = function () {
